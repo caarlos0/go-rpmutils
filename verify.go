@@ -56,11 +56,22 @@ type Signature struct {
 	hash   hash.Hash
 }
 
+// Verifier is a function that verifies a signature.
+// It should return an error if the signature is invalid.
+type Verifier func(sig *Signature) error
+
 // Verify the PGP signature over a RPM file. knownKeys should enumerate public
 // keys to check against, otherwise the signature validity cannot be verified.
 // If knownKeys is nil then digests will be checked but only the raw key ID will
 // be available.
 func Verify(stream io.Reader, knownKeys openpgp.EntityList) (header *RpmHeader, sigs []*Signature, err error) {
+	return VerifyWith(stream, knownKeysVerifier(knownKeys))
+}
+
+// Verify the PGP signature over a RPM file using the given Verifier implementation.
+// If knownKeys is nil then digests will be checked but only the raw key ID will
+// be available.
+func VerifyWith(stream io.Reader, verifier Verifier) (header *RpmHeader, sigs []*Signature, err error) {
 	lead, sigHeader, err := readSignatureHeader(stream)
 	if err != nil {
 		return nil, nil, err
@@ -89,11 +100,9 @@ func Verify(stream io.Reader, knownKeys openpgp.EntityList) (header *RpmHeader, 
 	if !checkMd5(sigHeader, payloadDigest) {
 		return nil, nil, errors.New("md5 digest mismatch")
 	}
-	if knownKeys != nil {
-		for _, sig := range sigs {
-			if err := checkSig(sig, knownKeys); err != nil {
-				return nil, nil, err
-			}
+	for _, sig := range sigs {
+		if err := verifier(sig); err != nil {
+			return nil, nil, err
 		}
 	}
 	hdr := &RpmHeader{
@@ -180,24 +189,26 @@ func setupDigesters(sigHeader *rpmHeader, payloadDigest io.Writer) ([]*Signature
 	return sigs, headerMulti, payloadMulti, nil
 }
 
-func checkSig(sig *Signature, knownKeys openpgp.EntityList) error {
-	keys := knownKeys.KeysById(sig.KeyId)
-	if keys == nil {
-		return fmt.Errorf("keyid %x not found", sig.KeyId)
+func knownKeysVerifier(knownKeys openpgp.EntityList) Verifier {
+	return func(sig *Signature) error {
+		keys := knownKeys.KeysById(sig.KeyId)
+		if keys == nil {
+			return fmt.Errorf("keyid %x not found", sig.KeyId)
+		}
+		key := keys[0]
+		sig.Signer = key.Entity
+		var err error
+		switch pkt := sig.packet.(type) {
+		case *packet.Signature:
+			err = key.PublicKey.VerifySignature(sig.hash, pkt)
+		case *packet.SignatureV3:
+			err = key.PublicKey.VerifySignatureV3(sig.hash, pkt)
+		}
+		if err != nil {
+			return err
+		}
+		sig.packet = nil
+		sig.hash = nil
+		return nil
 	}
-	key := keys[0]
-	sig.Signer = key.Entity
-	var err error
-	switch pkt := sig.packet.(type) {
-	case *packet.Signature:
-		err = key.PublicKey.VerifySignature(sig.hash, pkt)
-	case *packet.SignatureV3:
-		err = key.PublicKey.VerifySignatureV3(sig.hash, pkt)
-	}
-	if err != nil {
-		return err
-	}
-	sig.packet = nil
-	sig.hash = nil
-	return nil
 }
