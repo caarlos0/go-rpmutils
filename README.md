@@ -1,6 +1,6 @@
 # Go RPM Utils
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/sassoftware/go-rpmutils.svg)](https://pkg.go.dev/github.com/sassoftware/go-rpmutils)
+[![Go Reference](https://pkg.go.dev/badge/github.com/caarlos0/go-rpmutils.svg)](https://pkg.go.dev/github.com/caarlos0/go-rpmutils)
 
 go-rpmutils is a library written in [go](http://golang.org) for parsing and extracting content from [RPMs](http://www.rpm.org).
 
@@ -51,4 +51,4 @@ if err := rpm.ExpandPayload("destdir"); err != nil {
 
 ## License
 
-go-rpmutils is released under the Apache 2.0 license. See [LICENSE](https://github.com/sassoftware/go-rpmutils/blob/master/LICENSE).
+go-rpmutils is released under the Apache 2.0 license. See [LICENSE](https://github.com/caarlos0/go-rpmutils/blob/master/LICENSE).

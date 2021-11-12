@@ -1,4 +1,4 @@
-module github.com/sassoftware/go-rpmutils
+module github.com/caarlos0/go-rpmutils
 
 go 1.13
 

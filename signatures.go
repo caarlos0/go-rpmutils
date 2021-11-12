@@ -29,7 +29,7 @@ import (
 	"time"
 
 	"github.com/ProtonMail/go-crypto/openpgp/packet"
-	"github.com/sassoftware/go-rpmutils/fileutil"
+	"github.com/caarlos0/go-rpmutils/fileutil"
 )
 
 // SignatureOptions describes additional configuration for SignRpm methods
